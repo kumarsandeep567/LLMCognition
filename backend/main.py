@@ -145,6 +145,7 @@ def list_prompts(count: Optional[int] = None):
                     'message'   : json_result
                 }
 
+                conn.close()
                 return response
 
             except Exception as exception:
