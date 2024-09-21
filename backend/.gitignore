@@ -1,0 +1,4 @@
+.env
+fastapi_errors.log
+installation.md
+__pycache__/
