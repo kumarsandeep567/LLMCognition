@@ -382,6 +382,8 @@ def reset_password(reset_data: PasswordReset) -> dict[str, Any]:
 @app.get("/listprompts")
 @app.get("/listprompts/{count}")
 def list_prompts(count: Optional[int] = None) -> dict[str, Any]:
+    '''Fetch "x" number of prompts from the database'''
+
     if count is None:
         logger.info("GET - /listprompts request received")
         count = 5
@@ -423,12 +425,162 @@ def list_prompts(count: Optional[int] = None) -> dict[str, Any]:
             except Exception as exception:
                 logger.error("Error: list_prompts() encountered a SQL error")
                 logger.error(exception)
+
+            finally:
+                conn.close()
+                logger.info("Database - Connection to the database was closed")
     
-    return {
-        'status'    : HTTPStatus.INTERNAL_SERVER_ERROR,
-        'type'      : "string",
-        'message'   : "Could not fetch the list of prompts. Something went wrong."
-    }
+        return {
+            'status'    : HTTPStatus.INTERNAL_SERVER_ERROR,
+            'type'      : "string",
+            'message'   : "Could not fetch the list of prompts. Something went wrong."
+        }
+
+
+# Route for fetching all details about a prompt
+@app.get("/loadprompt/{task_id}")
+def loadprompt(task_id: str) -> dict[str, Any]:
+    '''Load all information from the database regarding the given prompt'''
+
+    logger.info(f"GET - /loadprompt/{task_id} request received")
+    conn = create_connection()
+
+    if conn is None:
+        return {
+            'status'    : HTTPStatus.SERVICE_UNAVAILABLE,
+            'type'      : "string",
+            'message'   : "Database not found :("
+        }
+
+    if conn and conn.is_connected():
+        with conn.cursor(dictionary = True) as cursor:
+            try:
+
+                # Fetch the task_id, question, level, final_answer, file_name 
+                logger.info("SQL - Running a SELECT statement")
+                query = """
+                SELECT task_id, question, level, final_answer, file_name 
+                FROM gaia_features
+                WHERE task_id = %s
+                """
+                result = cursor.execute(query, (task_id,))
+                record = cursor.fetchone()
+                logger.info("SQL - SELECT statement complete")
+
+                if record is None:
+                    conn.close()
+                    logger.info("Database - Connection to the database was closed")
+
+                    return {
+                        'status'    : HTTPStatus.NOT_FOUND,
+                        'type'      : "string",
+                        'message'   : f"Could not fetch the details for the given task_id (not found) {task_id}"
+                    }
+
+                conn.close()
+                logger.info("Database - Connection to the database was closed")
+
+                return {
+                    'status'    : HTTPStatus.OK,
+                    'type'      : "json",
+                    'message'   : record
+                }
+
+            except Exception as exception:
+                logger.error("Error: list_prompts() encountered a SQL error")
+                logger.error(exception)
+
+            finally:
+                conn.close()
+                logger.info("Database - Connection to the database was closed")
+    
+        return {
+            'status'    : HTTPStatus.INTERNAL_SERVER_ERROR,
+            'type'      : "string",
+            'message'   : "Could not fetch details for the prompt. Something went wrong."
+        }
+
+
+# Route for fetching annotation details for a prompt
+@app.get("/getannotation/{task_id}")
+def getannotation(task_id: str) -> dict[str, Any]:
+    '''Load the annotation from the database regarding the given prompt'''
+
+    logger.info(f"GET - /loadprompt/{task_id} request received")
+    conn = create_connection()
+
+    if conn is None:
+        return {
+            'status'    : HTTPStatus.SERVICE_UNAVAILABLE,
+            'type'      : "string",
+            'message'   : "Database not found :("
+        }
+
+    if conn and conn.is_connected():
+        with conn.cursor(dictionary = True) as cursor:
+            try:
+
+                # Fetch the final_answer for the task_id
+                logger.info("SQL - Running a SELECT statement")
+                query = """SELECT final_answer FROM gaia_features WHERE task_id = %s"""
+
+                result = cursor.execute(query, (task_id,))
+                final_answer = cursor.fetchone()
+                logger.info("SQL - SELECT statement complete")
+
+                if final_answer is None:
+                    conn.close()
+                    logger.info("Database - Connection to the database was closed")
+
+                    return {
+                        'status'    : HTTPStatus.NOT_FOUND,
+                        'type'      : "string",
+                        'message'   : f"Could not fetch the details for the given task_id (not found) {task_id}"
+                    }
+
+                # Fetch the steps for the task_id
+                logger.info("SQL - Running a SELECT statement")
+                query = """SELECT Steps FROM annotation_features WHERE task_id = %s"""
+
+                result = cursor.execute(query, (task_id,))
+                prompt_steps = cursor.fetchone()
+                logger.info("SQL - SELECT statement complete")
+
+                if prompt_steps is None:
+                    conn.close()
+                    logger.info("Database - Connection to the database was closed")
+
+                    return {
+                        'status'    : HTTPStatus.NOT_FOUND,
+                        'type'      : "string",
+                        'message'   : f"Could not fetch the annotation steps for the given task_id (not found) {task_id}"
+                    }
+                
+                filtered_prompt = prompt_steps['Steps'].replace(final_answer['final_answer'], '___')
+
+                conn.close()
+                logger.info("Database - Connection to the database was closed")
+
+                return {
+                    'status'    : HTTPStatus.OK,
+                    'type'      : "string",
+                    'message'   : filtered_prompt
+                }
+
+            except Exception as exception:
+                logger.error("Error: list_prompts() encountered a SQL error")
+                logger.error(exception)
+
+            finally:
+                conn.close()
+                logger.info("Database - Connection to the database was closed")
+    
+        return {
+            'status'    : HTTPStatus.INTERNAL_SERVER_ERROR,
+            'type'      : "string",
+            'message'   : "Could not fetch details for the prompt. Something went wrong."
+        }
+
 
 # ====================== Application service : End ======================
 
