@@ -2,3 +2,5 @@ fastapi[standard]
 mysql-connector-python
 python-multipart
 passlib
+tiktoken
+openai
