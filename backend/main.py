@@ -3,6 +3,7 @@ import time
 import json
 import logging
 import mysql.connector
+from openai import OpenAI
 from fastapi import FastAPI
 from http import HTTPStatus
 from pydantic import BaseModel
@@ -12,7 +13,7 @@ from mysql.connector import Error
 from fastapi.middleware.cors import CORSMiddleware
 
 # Custom libraries
-from helpers import get_password_hash, verify_password
+from helpers import get_password_hash, verify_password, count_tokens, generate_restriction
 
 # ============================= FastAPI : Begin =============================
 # Initialize FastAPI instance
@@ -31,6 +32,13 @@ app.add_middleware(
 
 # Load env variables
 load_dotenv()
+
+# Setup OpenAI API key
+openai_client = OpenAI(
+    api_key         = os.getenv("OPENAI_API"),
+    project         = os.getenv("PROJECT_ID"),
+    organization    = os.getenv("ORGANIZATION_ID")
+)
 
 
 # ============================= Logger : Begin =============================
@@ -74,6 +82,9 @@ class PasswordReset(BaseModel):
     phone: str
     email: str
     new_password: str
+
+class QueryGPT(BaseModel):
+    task_id: str
 
 
 def create_connection(attempts = 3, delay = 2):
@@ -580,6 +591,52 @@ def getannotation(task_id: str) -> dict[str, Any]:
             'type'      : "string",
             'message'   : "Could not fetch details for the prompt. Something went wrong."
         }
+
+
+# Route for querying GPT
+@app.post("/querygpt")
+async def query_gpt(query: QueryGPT) -> dict[str, Any]:
+    '''Forward the question to OpenAI GPT4 and evaluate based on GAIA Benchmark'''
+
+    logger.info(f"POST - /querygpt/{query.task_id} request received")
+    
+    try:
+        
+        # Get the prompt, apply restriction wherever needed, and send to GPT
+        prompt = loadprompt(query.task_id)
+
+        if prompt and prompt['status'] == HTTPStatus.OK:
+            
+            token_count = count_tokens(prompt['message']['question'])
+            restriction = generate_restriction(prompt['message']['final_answer'])
+            full_question = f"{prompt['message']['question']} {restriction}".strip()
+
+            # Send question to GPT
+            logger.info("GPT - Sending a ChatCompletion request")
+            response = openai_client.chat.completions.create(
+                model = "gpt-4o",
+                temperature = 0.6,
+                messages = [
+                    {"role": "system", "content": "You are a helpful assistant that obeys the instructions given and provides the correct answers for any questions provided."},
+                    {"role": "user", "content": full_question}
+                ]
+            )
+
+            gpt_response = response.choices[0].message.content
+
+            return {
+                "status"        : HTTPStatus.OK,
+                "task_id"       : prompt['message']['task_id'],
+                "question"      : full_question,
+                "level"         : prompt['message']['level'],
+                "file_name"     : prompt['message']['file_name'],
+                "token_count"   : token_count,
+                "gpt_response"  : gpt_response
+            }
+    
+    except Exception as exception:
+        logger.error("Error: querygpt() encountered a an error")
+        logger.error(exception)
 
 
 # ====================== Application service : End ======================
