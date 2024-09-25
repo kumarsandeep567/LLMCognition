@@ -591,6 +591,45 @@ def getannotation(task_id: str) -> dict[str, Any]:
             'type'      : "string",
             'message'   : "Could not fetch details for the prompt. Something went wrong."
         }
+    
+
+def update_analytics(data: dict) -> bool:
+    '''Save GPT-4's response and some other data to the database'''
+
+    logger.info("INTERNAL - request to save response data to database received")
+    conn = create_connection()
+    response = False
+
+    if conn and conn.is_connected():
+        with conn.cursor(dictionary = True) as cursor:
+            try:
+
+                # Update the analytics 
+                # Insert the new user in the database
+                logger.info("SQL - Running an INSERT statement")
+                query = """
+                INSERT INTO analytics (user_id, task_id, gpt_response, tokens_per_text_prompt)
+                VALUES (%s, %s, %s, %s)
+                """
+                cursor.execute(query, (
+                    data['user_id'],
+                    data['task_id'],
+                    data['gpt_response'],
+                    data['token_count']
+                ))
+                conn.commit()
+                logger.info("SQL - INSERT statement complete")
+                response = True         
+
+            except Exception as exception:
+                logger.error("Error: update_analytics() encountered an error")
+                logger.error(exception)
+                
+            finally:
+                conn.close()
+                logger.info("Database - Connection to the database was closed")
+    
+    return response
 
 
 # Route for querying GPT
@@ -622,9 +661,23 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 ]
             )
 
+            logger.info("GPT - ChatCompletion request complete")
             gpt_response = response.choices[0].message.content
 
-            return {
+            # Save to analytics table
+            response_data = {
+                "user_id"       : 6,
+                "task_id"       : prompt['message']['task_id'],
+                "token_count"   : token_count,
+                "gpt_response"  : gpt_response
+            }
+
+            if update_analytics(response_data):
+                logger.info("INTERNAL - analytics data saved to database")
+            else:
+                logger.error("INTERNAL - Failed to save analytics data to database")
+
+            json_response = {
                 "status"        : HTTPStatus.OK,
                 "task_id"       : prompt['message']['task_id'],
                 "question"      : full_question,
@@ -633,10 +686,25 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 "token_count"   : token_count,
                 "gpt_response"  : gpt_response
             }
+
+            # Get the annotation and append it to the json response
+            logger.info(f"INTERNAL - Fetching annotation for task_id {prompt['message']['task_id']}")
+            annotation = getannotation(prompt['message']['task_id'])
+
+            if annotation["status"] == HTTPStatus.OK:
+                json_response["annotation_steps"] = annotation["message"]
+
+            return json_response
     
     except Exception as exception:
         logger.error("Error: querygpt() encountered a an error")
         logger.error(exception)
+
+    return {
+        'status'    : HTTPStatus.INTERNAL_SERVER_ERROR,
+        'type'      : "string",
+        'message'   : "Could not send prompt to GPT. Something went wrong."
+    }
 
 
 # ====================== Application service : End ======================
