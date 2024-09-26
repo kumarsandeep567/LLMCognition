@@ -1,0 +1,6 @@
+pandas
+datasets
+huggingface-hub
+python-dotenv
+google-cloud-storage
+mysql-connector-python
