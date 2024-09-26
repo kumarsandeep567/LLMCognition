@@ -11,6 +11,33 @@ The framework enables users to:
 
 ---
 
+## Database - ETL
+### Overview
+Automated the process of downloading validation files from the Hugging Face hub, uploading the data into MySQL database, uploading files into Google Cloud Storage bucket, and processing the metadata JSON file into formatted CSV file. The processes are streamlined while ensuring data integrity and accessibility.
+
+### File Structure
+In Google Cloud Storage, a bucket is created named ```gaia_benchmark``` where all the validation set files are being stored.
+All the files inside validation split of GAIA benchmark dataset are stored in path ```https://storage.cloud.google.com/gaia_benchmark/files/file_name```
+All the formatted CSV files created by parsing JSON's are stored in path ```https://storage.cloud.google.com/gaia_benchmark/csv_files/file_name```
+
+### Installing Dependencies
+To install the dependencies run the following command on terminal:
+```pip install -r requirements.txt```
+
+### Execution
+To complete the database-ETL process,
+1) Ensure that you have set all the necessary environment variables in your .env file.
+2) Load data from hugging face into MySQL database and Google Cloud Storage by running the following command:
+```python main.py```
+-- a) This command will load data from Hugging Face GAIA benchmark dataset
+   b) Download all the files into Google Cloud Storage bucket
+   c) Parse JSON file and format it into CSV file, upload the CSV into Google Cloud Storage bucket
+   d) Insert the gaia_features and gaia_annotations data into MySQL database
+   
+
+
+---
+
 ### Contributors take note!
 Please avoid commiting to the `main` branch directly. Instead, create your own branch (say `api` branch) and push your changes to your own branch. 
 
