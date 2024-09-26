@@ -13,7 +13,12 @@ from mysql.connector import Error
 from fastapi.middleware.cors import CORSMiddleware
 
 # Custom libraries
-from helpers import get_password_hash, verify_password, count_tokens, generate_restriction
+from helpers import     \
+get_password_hash,      \
+verify_password,        \
+count_tokens,           \
+generate_restriction,   \
+rectification_helper
 
 # ============================= FastAPI : Begin =============================
 # Initialize FastAPI instance
@@ -85,6 +90,7 @@ class PasswordReset(BaseModel):
 
 class QueryGPT(BaseModel):
     task_id: str
+    updated_steps: Optional[str] = None
 
 
 def create_connection(attempts = 3, delay = 2):
@@ -127,6 +133,16 @@ def create_connection(attempts = 3, delay = 2):
 @app.get("/health")
 def health() -> dict[str, Any]:
     '''Check if the FastAPI application is setup and running'''
+
+    update_analytics(
+        {
+                "user_id"       : 6,
+                "task_id"       : '00d579ea-0889-4fd9-a771-2c8d79835c8d',
+                "token_count"   : 32,
+                "gpt_response"  : 'Mark Simson',
+                "updated_steps" : "This is a test to check if everything works"
+        }
+    )
 
     logger.info("GET - /health request received")
     return {
@@ -605,21 +621,19 @@ def update_analytics(data: dict) -> bool:
             try:
 
                 # Update the analytics 
-                # Insert the new user in the database
                 logger.info("SQL - Running an INSERT statement")
-                query = """
-                INSERT INTO analytics (user_id, task_id, gpt_response, tokens_per_text_prompt)
-                VALUES (%s, %s, %s, %s)
-                """
-                cursor.execute(query, (
-                    data['user_id'],
-                    data['task_id'],
-                    data['gpt_response'],
-                    data['token_count']
-                ))
+
+                # Get the columns and the corresponding placeholders
+                columns = ', '.join(data.keys())
+                placeholders = ', '.join(['%s'] * len(data))
+
+                query = f"INSERT INTO analytics ({columns}) VALUES ({placeholders})"
+                print("Query is ", query)
+
+                cursor.execute(query, tuple(data.values()))
                 conn.commit()
                 logger.info("SQL - INSERT statement complete")
-                response = True         
+                response = True
 
             except Exception as exception:
                 logger.error("Error: update_analytics() encountered an error")
@@ -640,21 +654,37 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
     logger.info(f"POST - /querygpt/{query.task_id} request received")
     
     try:
-        
+
         # Get the prompt, apply restriction wherever needed, and send to GPT
         prompt = loadprompt(query.task_id)
 
         if prompt and prompt['status'] == HTTPStatus.OK:
             
-            token_count = count_tokens(prompt['message']['question'])
-            restriction = generate_restriction(prompt['message']['final_answer'])
-            full_question = f"{prompt['message']['question']} {restriction}".strip()
+            # If query.updated_steps is empty, then it's a fresh prompt
+            if (query.updated_steps is None) or (query.updated_steps == ''):
+                
+                restriction = generate_restriction(prompt['message']['final_answer'])
+                full_question = f"{prompt['message']['question']} {restriction}".strip()
+            else:
+
+                # Let GPT know the previous response was incorrect
+                rectification = rectification_helper()
+                restriction = generate_restriction(prompt['message']['final_answer'])
+                full_question = f"{rectification} Question: {prompt['message']['question']} Steps: {query.updated_steps} {restriction}".strip()
+
+            # Calculate the tokens and cost
+            token_count = count_tokens(full_question)
+            cost = token_count * 0.000005
+            cost = float('{:.4f}'.format(cost))
+
+            # Record the time
+            start_time = time.time()
 
             # Send question to GPT
             logger.info("GPT - Sending a ChatCompletion request")
             response = openai_client.chat.completions.create(
                 model = "gpt-4o",
-                temperature = 0.6,
+                temperature = 1,
                 messages = [
                     {"role": "system", "content": "You are a helpful assistant that obeys the instructions given and provides the correct answers for any questions provided."},
                     {"role": "user", "content": full_question}
@@ -662,15 +692,23 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
             )
 
             logger.info("GPT - ChatCompletion request complete")
+
+            time_consumed = time.time() - start_time
+            time_consumed = float('{:.3f}'.format(time_consumed))
             gpt_response = response.choices[0].message.content
 
             # Save to analytics table
             response_data = {
-                "user_id"       : 6,
-                "task_id"       : prompt['message']['task_id'],
-                "token_count"   : token_count,
-                "gpt_response"  : gpt_response
+                "user_id"                   : 6,
+                "task_id"                   : prompt['message']['task_id'],
+                "gpt_response"              : gpt_response,
+                "tokens_per_text_prompt"    : token_count,
+                'total_cost'                : cost,
+                'time_consumed'             : time_consumed
             }
+
+            if (query.updated_steps is not None) or (query.updated_steps != ''):
+                response_data["updated_steps"] = query.updated_steps
 
             if update_analytics(response_data):
                 logger.info("INTERNAL - analytics data saved to database")
@@ -682,8 +720,10 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 "task_id"       : prompt['message']['task_id'],
                 "question"      : full_question,
                 "level"         : prompt['message']['level'],
+                "final_answer"  : prompt['message']['final_answer'],
                 "file_name"     : prompt['message']['file_name'],
                 "token_count"   : token_count,
+                "total_cost"    : cost,
                 "gpt_response"  : gpt_response
             }
 
@@ -695,7 +735,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 json_response["annotation_steps"] = annotation["message"]
 
             return json_response
-    
+
     except Exception as exception:
         logger.error("Error: querygpt() encountered a an error")
         logger.error(exception)
