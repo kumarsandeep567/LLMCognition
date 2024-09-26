@@ -5,6 +5,7 @@ from google.oauth2 import service_account
 import logging
 import mysql.connector
 import pandas as pd
+import ast
 import os
 
 # Logger function
@@ -13,10 +14,11 @@ logger = logging.getLogger(__name__)
 
 def execute_create_query(conn):
     try:
-        drop_table_query = "DROP TABLE IF EXISTS gaia_features;"
-        create_table_query = """
+        drop_features_table_query = "DROP TABLE IF EXISTS gaia_features;"
+        drop_annotation_table_query = "DROP TABLE IF EXISTS gaia_annotations;"
+        create_features_table_query = """
         CREATE TABLE gaia_features(
-            task_id VARCHAR(255),
+            task_id VARCHAR(255) PRIMARY KEY,
             question TEXT,
             level INT,
             final_answer VARCHAR(255),
@@ -24,11 +26,24 @@ def execute_create_query(conn):
             file_path VARCHAR(255)
         );
         """
+        create_annotation_table_query = """
+        CREATE TABLE gaia_annotations(
+            task_id VARCHAR(255) NOT NULL,
+            steps TEXT,
+            number_of_steps VARCHAR(255),
+            time_taken VARCHAR(255),
+            tools TEXT,
+            number_of_tools VARCHAR(255)
+        );
+        """
 
         cursor = conn.cursor()
-        cursor.execute(drop_table_query)
-        cursor.execute(create_table_query)
-        print("Table gaia_features created successfully")
+        cursor.execute(drop_features_table_query)
+        cursor.execute(create_features_table_query)
+        cursor.execute(drop_annotation_table_query)
+        cursor.execute(create_annotation_table_query)
+        print("\nTable gaia_features created successfully\n")
+        print("Table gaia_annotations created successfully\n")
     except Exception as e:
         print(f"Error creating table: {e}")
         raise e
@@ -42,15 +57,23 @@ def execute_select_query(conn):
     for row in res:
         print(row)
 
-def execute_insert_query(conn, formatted_data):
-    insert_query = """
+def execute_insert_query(conn, formatted_data, formatted_metadata):
+    insert_features_table_query = """
     INSERT INTO gaia_features (task_id, question, level, final_answer, file_name, file_path)
     VALUES (%s, %s, %s, %s, %s, %s)
     """
+    insert_annotation_table_query = """
+    INSERT INTO gaia_annotations (task_id, steps, number_of_steps, time_taken, tools, number_of_tools)
+    VALUES (%s, %s, %s, %s, %s, %s)
+    """
+
     cursor = conn.cursor()
     for item in formatted_data:
-        cursor.execute(insert_query, (item['task_id'], item['question'], item['level'], item['final_answer'], item['file_name'], item['file_path']))
-
+        cursor.execute(insert_features_table_query, (item['task_id'], item['question'], item['level'], item['final_answer'], item['file_name'], item['file_path']))
+    print("Insertion into gaia_features done\n")
+    for item in formatted_metadata:
+        cursor.execute(insert_annotation_table_query, (item['task_id'], item['steps'], item['number_of_steps'], item['time_taken'], item['tools'], item['number_of_tools']))
+    print("Insertion into gaia_annotations done\n")
     print("Insert statement executed successfully")
 
 def connect_to_mysql():
@@ -91,12 +114,13 @@ def get_file_paths(bucket_name, creds_file_path, gcp_folder_path):
 
 def format_csv_data(df, file_paths_dict):
     formatted_data = []
+    formatted_metadata = []
     
     for index, row in df.iterrows():
         file_name = None if ((pd.isna(row['file_name'])) or (row['file_name'] == '')) else row['file_name'].strip('"')
         file_path = file_paths_dict.get(file_name)
 
-        print(f"File Name: {file_name}, File Path: {file_path}")
+        # print(f"File Name: {file_name}, File Path: {file_path}")
 
         formatted_row = {
             'task_id': row["task_id"].strip('"'),
@@ -107,7 +131,22 @@ def format_csv_data(df, file_paths_dict):
             'file_path': file_path
         }
         formatted_data.append(formatted_row)
-    return formatted_data
+
+        metadata_str = row['Annotator Metadata']
+        metadata = ast.literal_eval(metadata_str)
+
+        formatted_metadata_row = {
+            'task_id': row['task_id'].strip('"'),
+            'steps' : metadata['Steps'],
+            'number_of_steps' : metadata['Number of steps'],
+            'time_taken' : metadata['How long did this take?'],
+            'tools' : metadata['Tools'],
+            'number_of_tools' : metadata['Number of tools']
+        }
+        formatted_metadata.append(formatted_metadata_row)
+
+
+    return formatted_data, formatted_metadata
 
 
 
@@ -135,13 +174,12 @@ def main():
         # Load CSV data into DataFrame
         df = pd.read_csv(local_csv_path)
 
-        formatted_data = format_csv_data(df, file_paths_dict)
+        formatted_data, formatted_metadata = format_csv_data(df, file_paths_dict)
 
         # Execute Queries
         execute_create_query(conn)
         execute_select_query(conn)
-        execute_insert_query(conn, formatted_data)
-        execute_select_query(conn)
+        execute_insert_query(conn, formatted_data, formatted_metadata)
         conn.commit()
 
     except Exception as e:
