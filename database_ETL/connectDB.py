@@ -29,12 +29,13 @@ def execute_create_query(conn):
         """
         create_annotation_table_query = """
         CREATE TABLE gaia_annotations(
-            task_id VARCHAR(255) NOT NULL,
+            task_id VARCHAR(255) PRIMARY KEY,
             steps TEXT,
             number_of_steps VARCHAR(255),
             time_taken VARCHAR(255),
             tools TEXT,
-            number_of_tools VARCHAR(255)
+            number_of_tools VARCHAR(255),
+            FOREIGN KEY (task_id) REFERENCES gaia_features(task_id)
         );
         """
 
@@ -157,7 +158,6 @@ def format_csv_data(df, file_paths_dict):
         # Replace final_answer in steps with an empty string
         if 'final_answer' in formatted_row:
             final_answer = formatted_row['final_answer']
-            # Replace the answer with an empty string
             metadata['Steps'] = metadata['Steps'].replace(final_answer, '') 
 
 
