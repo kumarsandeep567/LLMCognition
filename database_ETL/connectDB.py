@@ -154,6 +154,13 @@ def format_csv_data(df, file_paths_dict):
         metadata_str = row['Annotator Metadata']
         metadata = ast.literal_eval(metadata_str)
 
+        # Replace final_answer in steps with an empty string
+        if 'final_answer' in formatted_row:
+            final_answer = formatted_row['final_answer']
+            # Replace the answer with an empty string
+            metadata['Steps'] = metadata['Steps'].replace(final_answer, '') 
+
+
         formatted_metadata_row = {
             'task_id': row['task_id'].strip('"'),
             'steps' : metadata['Steps'],
@@ -167,8 +174,6 @@ def format_csv_data(df, file_paths_dict):
 
 
     return formatted_data, formatted_metadata
-
-
 
 def main():
     logger.info("Inside main function")
