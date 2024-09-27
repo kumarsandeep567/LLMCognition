@@ -5,18 +5,38 @@ from google.oauth2 import service_account
 import logging
 import mysql.connector
 import pandas as pd
+import ast
 import os
 
 # Logger function
 logging.basicConfig(level = logging.INFO, format = '%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def execute_create_query(conn):
+def drop_foreign_key_if_exists(cursor, table_name, foreign_key_name):
     try:
-        drop_table_query = "DROP TABLE IF EXISTS gaia_features;"
-        create_table_query = """
+        cursor.execute(f"ALTER TABLE {table_name} DROP FOREIGN KEY {foreign_key_name};")
+        logger.info(f"Foreign key {foreign_key_name} dropped successfully.")
+    except mysql.connector.Error as e:
+        if e.errno == 1091:  # ER_CANT_DROP_FIELD_OR_KEY
+            logger.warning(f"Foreign key {foreign_key_name} does not exist and cannot be dropped.")
+        else:
+            logger.error(f"Error dropping foreign key {foreign_key_name}: {e}")
+            raise e
+
+def execute_create_query(conn):
+    logger.info("Creating tables")
+    try:
+
+        # Drop table queries
+        drop_features_table_query = "DROP TABLE IF EXISTS gaia_features;"
+        drop_annotation_table_query = "DROP TABLE IF EXISTS gaia_annotations;"
+        drop_users_table_query = "DROP TABLE IF EXISTS users;"
+        drop_analytics_table_query = "DROP TABLE IF EXISTS analytics;"
+
+        # Create table queries
+        create_features_table_query = """
         CREATE TABLE gaia_features(
-            task_id VARCHAR(255),
+            task_id VARCHAR(255) PRIMARY KEY,
             question TEXT,
             level INT,
             final_answer VARCHAR(255),
@@ -24,34 +44,122 @@ def execute_create_query(conn):
             file_path VARCHAR(255)
         );
         """
+        create_annotation_table_query = """
+        CREATE TABLE gaia_annotations(
+            task_id VARCHAR(255) PRIMARY KEY,
+            steps TEXT,
+            number_of_steps VARCHAR(255),
+            time_taken VARCHAR(255),
+            tools TEXT,
+            number_of_tools VARCHAR(255),
+            FOREIGN KEY (task_id) REFERENCES gaia_features(task_id)
+        );
+        """
+
+        create_users_table_query = """
+        CREATE TABLE IF NOT EXISTS users(
+            user_id INT PRIMARY KEY AUTO_INCREMENT,
+            first_name VARCHAR(50) NOT NULL,
+            last_name VARCHAR(50) NOT NULL,
+            phone VARCHAR(15) NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            password VARCHAR(255) NOT NULL
+        );
+        """
+
+        create_analytics_table_query = """
+        CREATE TABLE IF NOT EXISTS analytics(
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            user_id INT NOT NULL,
+            task_id VARCHAR(255) NOT NULL,
+            updated_steps TEXT DEFAULT NULL,
+            tokens_per_text_prompt VARCHAR(255) DEFAULT NULL,
+            tokens_per_attachment VARCHAR(255) DEFAULT NULL,
+            gpt_response TEXT DEFAULT NULL,
+            total_cost DOUBLE DEFAULT NULL,
+            time_consumed VARCHAR(255) DEFAULT NULL,
+            feedback TEXT NULL,
+            time_stamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (task_id) REFERENCES gaia_features(task_id)
+        );
+        """
 
         cursor = conn.cursor()
-        cursor.execute(drop_table_query)
-        cursor.execute(create_table_query)
-        print("Table gaia_features created successfully")
+        # Drop foreign key constraints if they exist
+        drop_foreign_key_if_exists(cursor, 'gaia_annotations', 'gaia_annotations_ibfk_1')
+        drop_foreign_key_if_exists(cursor, 'analytics', 'analytics_ibfk_1')
+        drop_foreign_key_if_exists(cursor, 'analytics', 'analytics_ibfk_2')
+        logger.info("Foreign key constraints dropped successfully.")
+
+        # gaia_features table
+        cursor.execute(drop_features_table_query)
+        cursor.execute(create_features_table_query)
+        logger.info("\nTable gaia_features created successfully\n")
+
+        # gaia_annotation table
+        cursor.execute(drop_annotation_table_query)
+        cursor.execute(create_annotation_table_query)
+        logger.info("\nTable gaia_annotations created successfully\n")
+
+        # users table
+        cursor.execute(drop_users_table_query)
+        cursor.execute(create_users_table_query)
+        logger.info("Table users created successfully\n")
+
+        # analytics table
+        cursor.execute(drop_analytics_table_query)
+        cursor.execute(create_analytics_table_query)
+        logger.info("Table analytics created successfully\n")
     except Exception as e:
         print(f"Error creating table: {e}")
         raise e
 
 def execute_select_query(conn):
-    query = 'SELECT * FROM gaia_features;'
-    cursor = conn.cursor()
-    cursor.execute(query)
-    res = cursor.fetchall()
-    print(f"The query execution results are:")
-    for row in res:
-        print(row)
+    logger.info("Selecting data from tables")
 
-def execute_insert_query(conn, formatted_data):
-    insert_query = """
+    # Queries
+    features_query = 'SELECT * FROM gaia_features;'
+    annotations_query = 'SELECT * FROM gaia_annotations;'
+
+    cursor = conn.cursor()
+
+    cursor.execute(features_query)
+    features_results = cursor.fetchall()
+    logger.info("Features query executed successfully.")
+
+    cursor.execute(annotations_query)
+    annotations_results = cursor.fetchall()
+    logger.info("Annotations query executed successfully.")
+
+    logger.info("Features Query Results:")
+    for row in features_results:
+        logger.info(row)
+    
+    logger.info("\nAnnotations Query Results:")
+    for row in annotations_results:
+        logger.info(row)
+
+def execute_insert_query(conn, formatted_data, formatted_metadata):
+    logger.info("Selecting data from tables")
+
+    insert_features_table_query = """
     INSERT INTO gaia_features (task_id, question, level, final_answer, file_name, file_path)
     VALUES (%s, %s, %s, %s, %s, %s)
     """
+    insert_annotation_table_query = """
+    INSERT INTO gaia_annotations (task_id, steps, number_of_steps, time_taken, tools, number_of_tools)
+    VALUES (%s, %s, %s, %s, %s, %s)
+    """
+
     cursor = conn.cursor()
     for item in formatted_data:
-        cursor.execute(insert_query, (item['task_id'], item['question'], item['level'], item['final_answer'], item['file_name'], item['file_path']))
-
-    print("Insert statement executed successfully")
+        cursor.execute(insert_features_table_query, (item['task_id'], item['question'], item['level'], item['final_answer'], item['file_name'], item['file_path']))
+    logger.info("Insertion into gaia_features done\n")
+    for item in formatted_metadata:
+        cursor.execute(insert_annotation_table_query, (item['task_id'], item['steps'], item['number_of_steps'], item['time_taken'], item['tools'], item['number_of_tools']))
+    logger.info("Insertion into gaia_annotations done\n")
+    logger.info("Insert statement executed successfully")
 
 def connect_to_mysql():
     try:
@@ -63,21 +171,22 @@ def connect_to_mysql():
         )
 
         if connection.is_connected():
-            print("Connected to MySQL database successfully")
+            logger.info("Connected to MySQL database successfully")
             return connection
     except Error as e:
-        print(f"Error as {e}")
+        logger.info(f"Error as {e}")
         raise e
     
 def download_csv_from_gcs(bucket_name, blob_name, local_file_path, creds_file_path):
     # Download CSV file from GCS
+    logger.info("In function to download CSV file from GCS")
 
     creds = service_account.Credentials.from_service_account_file(creds_file_path)
     client = storage.Client(credentials = creds)
     bkt = client.bucket(bucket_name)
     blob = bkt.blob(blob_name)
     blob.download_to_filename(local_file_path)
-    print(f"Downloaded {blob_name} from GCS bucket {bucket_name} to {local_file_path}")
+    logger.info(f"Downloaded {blob_name} from GCS bucket {bucket_name} to {local_file_path}")
 
 def get_file_paths(bucket_name, creds_file_path, gcp_folder_path):
     # Retrieve file names from GCS bucket
@@ -90,13 +199,13 @@ def get_file_paths(bucket_name, creds_file_path, gcp_folder_path):
 
 
 def format_csv_data(df, file_paths_dict):
+    logger.info("Formatting data inside CSV file")
     formatted_data = []
+    formatted_metadata = []
     
     for index, row in df.iterrows():
         file_name = None if ((pd.isna(row['file_name'])) or (row['file_name'] == '')) else row['file_name'].strip('"')
         file_path = file_paths_dict.get(file_name)
-
-        print(f"File Name: {file_name}, File Path: {file_path}")
 
         formatted_row = {
             'task_id': row["task_id"].strip('"'),
@@ -107,23 +216,40 @@ def format_csv_data(df, file_paths_dict):
             'file_path': file_path
         }
         formatted_data.append(formatted_row)
-    return formatted_data
+
+        metadata_str = row['Annotator Metadata']
+        metadata = ast.literal_eval(metadata_str)
+
+        # Replace final_answer in steps with an empty string
+        if 'final_answer' in formatted_row:
+            final_answer = formatted_row['final_answer']
+            metadata['Steps'] = metadata['Steps'].replace(final_answer, '') 
 
 
+        formatted_metadata_row = {
+            'task_id': row['task_id'].strip('"'),
+            'steps' : metadata['Steps'],
+            'number_of_steps' : metadata['Number of steps'],
+            'time_taken' : metadata['How long did this take?'],
+            'tools' : metadata['Tools'],
+            'number_of_tools' : metadata['Number of tools']
+        }
+        formatted_metadata.append(formatted_metadata_row)
+    logger.info("Features and metadata formatting done")
+
+
+    return formatted_data, formatted_metadata
 
 def main():
+    logger.info("Inside main function")
     load_dotenv()
     conn = connect_to_mysql()
     try:
 
         # Environment variables
-        # gaia_benchmark
         bucket_name = os.getenv("BUCKET_NAME")
-        #csv_files/parsed_metadata.csv
         blob_name = os.getenv("GCP_CSV_PATH") + os.getenv("CSV_FILENAME")
-        # parsed_metadata.csv
         local_csv_path = os.getenv("CSV_FILENAME")
-        # files/
         gcp_folder_path = os.getenv("GCP_FILES_PATH")
         creds_file_path = os.getenv("GCS_CREDENTIALS_PATH")
 
@@ -135,13 +261,12 @@ def main():
         # Load CSV data into DataFrame
         df = pd.read_csv(local_csv_path)
 
-        formatted_data = format_csv_data(df, file_paths_dict)
+        formatted_data, formatted_metadata = format_csv_data(df, file_paths_dict)
 
         # Execute Queries
         execute_create_query(conn)
         execute_select_query(conn)
-        execute_insert_query(conn, formatted_data)
-        execute_select_query(conn)
+        execute_insert_query(conn, formatted_data, formatted_metadata)
         conn.commit()
 
     except Exception as e:
