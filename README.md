@@ -104,7 +104,7 @@ Assignment1/
 2. GCS File Storage Path: https://storage.cloud.google.com/gaia_benchmark/files/file_name
 
 ## Live Application Link
-1. Streamlit application link: 
+1. Streamlit application link: https://bigdataassignment1.streamlit.app/
 
 ## Steps to run application
 1. **Clone the Repository**: Clone the repository to your local desktop
