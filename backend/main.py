@@ -2,6 +2,7 @@ import os
 import time
 import base64
 import logging
+import datetime
 import mysql.connector
 from openai import OpenAI
 from fastapi import FastAPI
@@ -10,6 +11,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from typing import Optional, Any
 from mysql.connector import Error
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # Custom libraries
@@ -99,6 +101,23 @@ class Feedback(BaseModel):
     user_id: int
     task_id: str
     feedback: str
+
+class AnalyticsResponse(BaseModel):
+    task_id: str
+    user_id: int
+    question: Optional[str]
+    level: Optional[str]
+    final_answer: Optional[str]
+    file_name: Optional[str]
+    updated_steps: Optional[str]
+    tokens_per_text_prompt: Optional[int]
+    tokens_per_attachment: Optional[int]
+    gpt_response: Optional[str]
+    total_cost: Optional[float]
+    time_consumed: Optional[float]
+    feedback: Optional[str]
+    time_stamp: str
+    how_long_did_this_take: Optional[str]
 
 
 def create_connection(attempts = 3, delay = 2):
@@ -741,6 +760,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
 
             # Calculate the tokens and cost
             token_count = 0
+
             for msg in messages:
                 if isinstance(msg['content'], str):
                     token_count += count_tokens(msg['content'])
@@ -748,6 +768,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                     token_count += count_tokens(msg['content'][0]['text'])
                     token_count += count_tokens(file_content)
 
+            file_token_count = count_tokens(file_content)
             cost = token_count * 0.000005
             cost = float('{:.4f}'.format(cost))
 
@@ -774,6 +795,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 "task_id"                   : prompt['message']['task_id'],
                 "gpt_response"              : gpt_response,
                 "tokens_per_text_prompt"    : token_count,
+                "tokens_per_attachment"     : file_token_count,
                 'total_cost'                : cost,
                 'time_consumed'             : time_consumed
             }
@@ -795,6 +817,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 "file_name"     : prompt['message']['file_name'],
                 "file_content"  : file_content,
                 "token_count"   : token_count,
+                "file_tokens"   : file_token_count,
                 "total_cost"    : cost,
                 "gpt_response"  : gpt_response
             }
@@ -865,7 +888,59 @@ def feedback(data: Feedback) -> dict[str, Any]:
                 conn.close()
                 logger.info("Database - Connection to the database was closed")
     
-    return response    
+    return response
+
+
+# Route for analytics
+@app.get("/analytics")
+async def get_analytics():
+    logger.info("GET - /analytics request received")
+    conn = create_connection()
+
+    if conn is None:
+        return {
+            'status'    : HTTPStatus.SERVICE_UNAVAILABLE,
+            'type'      : "string",
+            'message'   : "Database not found :("
+        }
+
+    if conn and conn.is_connected():
+        with conn.cursor(dictionary=True) as cursor:
+            try:
+                query = """
+                SELECT gfeat.*, atx.user_id, atx.updated_steps, atx.tokens_per_text_prompt, 
+                       atx.tokens_per_attachment, atx.gpt_response, atx.total_cost, 
+                       atx.time_consumed, atx.feedback, atx.time_stamp, afeat.How_long_did_this_take
+                FROM analytics atx, gaia_features gfeat, annotation_features afeat
+                WHERE atx.task_id = gfeat.task_id AND atx.task_id = afeat.task_id
+                """
+                cursor.execute(query)
+                results = cursor.fetchall()
+
+                # Process the results to ensure they are JSON serializable
+                processed_results = []
+                for row in results:
+                    processed_row = {}
+                    for key, value in row.items():
+                        if isinstance(value, (int, float, str, type(None))):
+                            processed_row[key] = value
+                        elif isinstance(value, (datetime.date, datetime.datetime)):
+                            processed_row[key] = value.isoformat()
+                        else:
+                            processed_row[key] = str(value)
+                    processed_results.append(processed_row)
+
+                return JSONResponse(content=processed_results)
+
+                return analytics_data
+
+            except Exception as exception:
+                logger.error("Error: get_analytics() encountered an error")
+                logger.error(exception)
+            
+            finally:
+                conn.close()
+                logger.info("Database - Connection to the database was closed")
 
 # ====================== Application service : End ======================
 
