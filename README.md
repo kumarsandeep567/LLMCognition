@@ -37,6 +37,7 @@ The project aims to evaluate the comprehension capabilities of a Large Language 
 ## Prerequisites
 
 ## Project Structure
+```
 Assignment1/
 ├── backend/
 │   ├── .env.example
@@ -65,7 +66,7 @@ Assignment1/
 │   └── validation.py
 ├── LICENSE
 └── README.md
-
+```
 
 ## Architecture Diagram
 
