@@ -106,7 +106,7 @@ Assignment1/
 ## Live Application Link
 1. Streamlit application link: https://bigdataassignment1.streamlit.app/
 
-##Codelabs Link
+##**Codelabs Link**
 https://codelabs-preview.appspot.com/?file_id=https://docs.google.com/document/d/1QsNQheQwEPl2ARqfzTyy77Sx9AKXMdM_8YSEY6-qCbU/edit#6
 
 ## Steps to run application
