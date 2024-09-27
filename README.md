@@ -34,9 +34,26 @@ The project aims to evaluate the comprehension capabilities of a Large Language 
 ## Data Source
 1. GAIA benchmark dataset: https://huggingface.co/datasets/gaia-benchmark/GAIA
 
+## Prerequisites
+
+## Project Structure
+
+
 ## Architecture Diagram
 
+![Architecture Diagram](https://github.com/BigDataIA-Fall2024-TeamB6/Assignment1/raw/main/diagram/llm_cognition.png)
 
+## Steps to run application
+
+
+## Team Information and Contribution
+Utilizing GitHub Issues is essential for tracking modifications, feature requests, and bugs within the project. It serves as a centralized platform for documenting all project-related concerns, allowing for transparent collaboration, prioritization, and assignment of tasks to team members. This practice ensures that the project's progress is cohesive, organized, and accessible to all stakeholders, fostering an environment of open communication and continuous improvement.
+
+Name           | Contribution %| 
+---------------|---------------| 
+Anirudh Joshi  | 34%           | 
+Nitant Jatale  | 33%           | 
+Rutuja More    | 33%           |  
 
 
 ## Problem Statement
