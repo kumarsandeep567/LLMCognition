@@ -11,9 +11,9 @@ The project aims to evaluate the comprehension capabilities of a Large Language 
 - Output: Structured database in MySQL with all gaia_features, and gaia_annotations columns, formatted files stored in the google cloud storage bucket
 
 ### 2. Fast API
-- Objective: 
-- Tools: 
-- Output:
+- Objective: The FastAPI application serves as an abstraction layer that hides all application processing, API calls to OpenAI, fetching data from MySQL database, downloading files from Google Cloud Storage Bucket.
+- Tools: MySQL database connector for interfacing with MySQL database, Google Cloud connector for downloading files from Google Cloud, OpenAI package for interacting with GPT (for text based content) and Whisper (for audio based content), tiktoken library for counting the number of tokens, PyPDF2 library for extracting content from PDF files, Base64 library for encoding images to text, openpyxl library for parsing MS Excel spreadsheets, docx library for parsing MS Word documents, dotenv library for setting environment variables, and json library for parsing json content.
+- Output: FastAPI ensures the response is always in a JSON format with HTTP status, message (response content), type (data type of response content), and additional fields (if needed)
 
 ### 3. Streamlit
 - Objective: To provide a user-friendly interface for validating GPT model responses by allowing users to compare generated responses with validation inputs, edit annotator steps, and provide feedback.
