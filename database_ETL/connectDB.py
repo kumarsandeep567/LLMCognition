@@ -12,11 +12,28 @@ import os
 logging.basicConfig(level = logging.INFO, format = '%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def drop_foreign_key_if_exists(cursor, table_name, foreign_key_name):
+    try:
+        cursor.execute(f"ALTER TABLE {table_name} DROP FOREIGN KEY {foreign_key_name};")
+        logger.info(f"Foreign key {foreign_key_name} dropped successfully.")
+    except mysql.connector.Error as e:
+        if e.errno == 1091:  # ER_CANT_DROP_FIELD_OR_KEY
+            logger.warning(f"Foreign key {foreign_key_name} does not exist and cannot be dropped.")
+        else:
+            logger.error(f"Error dropping foreign key {foreign_key_name}: {e}")
+            raise e
+
 def execute_create_query(conn):
     logger.info("Creating tables")
     try:
+
+        # Drop table queries
         drop_features_table_query = "DROP TABLE IF EXISTS gaia_features;"
         drop_annotation_table_query = "DROP TABLE IF EXISTS gaia_annotations;"
+        drop_users_table_query = "DROP TABLE IF EXISTS users;"
+        drop_analytics_table_query = "DROP TABLE IF EXISTS analytics;"
+
+        # Create table queries
         create_features_table_query = """
         CREATE TABLE gaia_features(
             task_id VARCHAR(255) PRIMARY KEY,
@@ -39,13 +56,61 @@ def execute_create_query(conn):
         );
         """
 
+        create_users_table_query = """
+        CREATE TABLE IF NOT EXISTS users(
+            user_id INT PRIMARY KEY AUTO_INCREMENT,
+            first_name VARCHAR(50) NOT NULL,
+            last_name VARCHAR(50) NOT NULL,
+            phone VARCHAR(15) NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            password VARCHAR(255) NOT NULL
+        );
+        """
+
+        create_analytics_table_query = """
+        CREATE TABLE IF NOT EXISTS analytics(
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            user_id INT NOT NULL,
+            task_id VARCHAR(255) NOT NULL,
+            updated_steps TEXT DEFAULT NULL,
+            tokens_per_text_prompt VARCHAR(255) DEFAULT NULL,
+            tokens_per_attachment VARCHAR(255) DEFAULT NULL,
+            gpt_response TEXT DEFAULT NULL,
+            total_cost DOUBLE DEFAULT NULL,
+            time_consumed VARCHAR(255) DEFAULT NULL,
+            feedback TEXT NULL,
+            time_stamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (task_id) REFERENCES gaia_features(task_id)
+        );
+        """
+
         cursor = conn.cursor()
+        # Drop foreign key constraints if they exist
+        drop_foreign_key_if_exists(cursor, 'gaia_annotations', 'gaia_annotations_ibfk_1')
+        drop_foreign_key_if_exists(cursor, 'analytics', 'analytics_ibfk_1')
+        drop_foreign_key_if_exists(cursor, 'analytics', 'analytics_ibfk_2')
+        logger.info("Foreign key constraints dropped successfully.")
+
+        # gaia_features table
         cursor.execute(drop_features_table_query)
         cursor.execute(create_features_table_query)
+        logger.info("\nTable gaia_features created successfully\n")
+
+        # gaia_annotation table
         cursor.execute(drop_annotation_table_query)
         cursor.execute(create_annotation_table_query)
-        logger.info("\nTable gaia_features created successfully\n")
-        logger.info("Table gaia_annotations created successfully\n")
+        logger.info("\nTable gaia_annotations created successfully\n")
+
+        # users table
+        cursor.execute(drop_users_table_query)
+        cursor.execute(create_users_table_query)
+        logger.info("Table users created successfully\n")
+
+        # analytics table
+        cursor.execute(drop_analytics_table_query)
+        cursor.execute(create_analytics_table_query)
+        logger.info("Table analytics created successfully\n")
     except Exception as e:
         print(f"Error creating table: {e}")
         raise e
