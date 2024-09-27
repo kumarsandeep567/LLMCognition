@@ -1,6 +1,6 @@
 import os
 import time
-import json
+import base64
 import logging
 import mysql.connector
 from openai import OpenAI
@@ -18,7 +18,9 @@ get_password_hash,      \
 verify_password,        \
 count_tokens,           \
 generate_restriction,   \
-rectification_helper
+rectification_helper,   \
+extract_file_content,   \
+download_files_from_gcs
 
 # ============================= FastAPI : Begin =============================
 # Initialize FastAPI instance
@@ -89,8 +91,14 @@ class PasswordReset(BaseModel):
     new_password: str
 
 class QueryGPT(BaseModel):
+    user_id: int
     task_id: str
     updated_steps: Optional[str] = None
+
+class Feedback(BaseModel):
+    user_id: int
+    task_id: str
+    feedback: str
 
 
 def create_connection(attempts = 3, delay = 2):
@@ -133,16 +141,6 @@ def create_connection(attempts = 3, delay = 2):
 @app.get("/health")
 def health() -> dict[str, Any]:
     '''Check if the FastAPI application is setup and running'''
-
-    update_analytics(
-        {
-                "user_id"       : 6,
-                "task_id"       : '00d579ea-0889-4fd9-a771-2c8d79835c8d',
-                "token_count"   : 32,
-                "gpt_response"  : 'Mark Simson',
-                "updated_steps" : "This is a test to check if everything works"
-        }
-    )
 
     logger.info("GET - /health request received")
     return {
@@ -317,6 +315,7 @@ def login(user: UserLogin) -> dict[str, Any]:
                     'type'      : "string",
                     "message"   : "User could not be logged in. Something went wrong.",
                 }
+
             finally:
                 conn.close()
                 logger.info("Database - Connection to the database was closed")
@@ -672,8 +671,83 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 restriction = generate_restriction(prompt['message']['final_answer'])
                 full_question = f"{rectification} Question: {prompt['message']['question']} Steps: {query.updated_steps} {restriction}".strip()
 
+            # Prepare the message to send to GPT-4o
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant that obeys the instructions given and provides the correct answers for any questions provided."},
+                {"role": "user", "content": full_question}
+            ]
+
+            # Prepare file parsing if available
+            file_name = prompt['message']['file_name']
+            file_content = None
+            content_available = False
+
+            # Download the files if they are not already available
+            if not os.path.exists(os.getenv('DOWNLOAD_DIR')):
+                content_available = download_files_from_gcs()
+            else:
+                content_available = True
+
+            if content_available:
+                if (file_name is not None) or (file_name != ''): 
+                    file_path = os.path.join(os.getcwd(), os.getenv('DOWNLOAD_DIR'), file_name)
+
+                    if file_name.lower().endswith(('.png', '.jpg')):
+
+                        # Encode the image to Base64
+                        with open(file_path, "rb") as image_file:
+                            file_content = base64.b64encode(image_file.read()).decode('utf-8')
+                        
+                        messages.append({
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "Here's the image related to the question:"},
+                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{file_content}"}}
+                            ]
+                        })
+
+                    elif file_name.lower().endswith(('.mp3')):
+
+                        audio_file= open(file_path, "rb")
+                        try:
+                            
+                            logger.info("WHISPER - Sending a audio transcription request")
+                            file_content = openai_client.audio.transcriptions.create(
+                                model = "whisper-1", 
+                                file = audio_file,
+                                response_format = "text"
+                            )
+
+                            if file_content is not None:
+                                messages.append({
+                                    "role": "user",
+                                    "content": f"Here's the transcription of the audio file related to the question: \n {file_content}"
+                                })
+                        
+                        except Exception as exception:
+                            logger.error("Error: WHISPER - querygpt() encountered an error")
+
+
+                    elif file_name.lower().endswith(('.pdf', '.txt', '.xlsx', '.csv', '.jsonld', '.docx', '.py')):
+                        
+                        # Parse the files
+                        file_content = extract_file_content(file_path)
+                        
+                        if file_content is not None:
+                            messages.append({
+                                "role": "user",
+                                "content": f"Here's the content of the file related to the question: \n\n {file_content}"
+                            })
+
             # Calculate the tokens and cost
-            token_count = count_tokens(full_question)
+            token_count = 0
+            for msg in messages:
+                if isinstance(msg['content'], str):
+                    token_count += count_tokens(msg['content'])
+                else:
+                    token_count += count_tokens(msg['content'][0]['text'])
+                    token_count += count_tokens(file_content)
+
             cost = token_count * 0.000005
             cost = float('{:.4f}'.format(cost))
 
@@ -685,10 +759,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
             response = openai_client.chat.completions.create(
                 model = "gpt-4o",
                 temperature = 1,
-                messages = [
-                    {"role": "system", "content": "You are a helpful assistant that obeys the instructions given and provides the correct answers for any questions provided."},
-                    {"role": "user", "content": full_question}
-                ]
+                messages = messages
             )
 
             logger.info("GPT - ChatCompletion request complete")
@@ -699,7 +770,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
 
             # Save to analytics table
             response_data = {
-                "user_id"                   : 6,
+                "user_id"                   : query.user_id,
                 "task_id"                   : prompt['message']['task_id'],
                 "gpt_response"              : gpt_response,
                 "tokens_per_text_prompt"    : token_count,
@@ -722,6 +793,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 "level"         : prompt['message']['level'],
                 "final_answer"  : prompt['message']['final_answer'],
                 "file_name"     : prompt['message']['file_name'],
+                "file_content"  : file_content,
                 "token_count"   : token_count,
                 "total_cost"    : cost,
                 "gpt_response"  : gpt_response
@@ -737,7 +809,7 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
             return json_response
 
     except Exception as exception:
-        logger.error("Error: querygpt() encountered a an error")
+        logger.error("Error: querygpt() encountered an error")
         logger.error(exception)
 
     return {
@@ -747,14 +819,56 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
     }
 
 
+# Route for saving feedback GPT
+@app.post("/feedback")
+def feedback(data: Feedback) -> dict[str, Any]:
+    '''Save the user's feedback for GPT's response for the task_id'''
+
+    logger.info(f"POST - /feedback/{data.task_id} request received")
+
+    conn = create_connection()
+
+    if conn and conn.is_connected():
+        with conn.cursor(dictionary = True) as cursor:
+            try:
+
+                # Update the analytics and save the feedback
+                logger.info("SQL - Running an UPDATE statement")
+
+                query = """
+                UPDATE analytics AS a
+                JOIN (SELECT id FROM analytics ORDER BY time_stamp DESC LIMIT 1) AS sub
+                ON a.id = sub.id
+                SET a.feedback = %s
+                WHERE a.user_id = %s AND a.task_id = %s
+                """
+
+                cursor.execute(query, (data.feedback, data.user_id, data.task_id))
+                conn.commit()
+                logger.info("SQL - UPDATE statement complete")
+                response = {
+                    'status'    : HTTPStatus.OK,
+                    'type'      : "string",
+                    'message'   : "Feedback saved successfully"
+                }
+
+            except Exception as exception:
+                logger.error("Error: feedback() encountered an error")
+                logger.error(exception)
+                response = {
+                    'status'    : HTTPStatus.INTERNAL_SERVER_ERROR,
+                    'type'      : "string",
+                    'message'   : "Could not save feedback. Something went wrong."
+                }
+                
+            finally:
+                conn.close()
+                logger.info("Database - Connection to the database was closed")
+    
+    return response    
+
 # ====================== Application service : End ======================
 
-
-# Tokenize the prompts that you send to gpt4 in fastapi
-# refer https://platform.openai.com/tokenizer
-
-# Use openai's tiktoken package to achieve this
-# referhttps://github.com/openai/tiktoken
 
 # Add a price warning in fastapi
 # Refer pricing charts based on tokens
