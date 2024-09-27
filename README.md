@@ -16,9 +16,9 @@ The project aims to evaluate the comprehension capabilities of a Large Language 
 - Output:
 
 ### 3. Streamlit
-- Objective: 
-- Tools: 
-- Output:
+- Objective: To provide a user-friendly interface for validating GPT model responses by allowing users to compare generated responses with validation inputs, edit annotator steps, and provide feedback.
+- Tools: Streamlit (web application framework), Pandas (data manipulation), Matplotlib (visualization), NumPy (numerical computations), Requests (API calls for data fetching and sending).
+- Output: The Search Engine Page features a query input and result display; the Validation Page allows users to compare GPT responses and provide feedback; the Analytics Page presents user data with visualizations of cost efficiency and operational metrics.
 
 ## Technologies
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-FD6A2B?style=for-the-badge&logo=huggingface&logoColor=white)](https://huggingface.co/)
