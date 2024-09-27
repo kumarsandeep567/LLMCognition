@@ -11,9 +11,9 @@ The project aims to evaluate the comprehension capabilities of a Large Language 
 - Output: Structured database in MySQL with all gaia_features, and gaia_annotations columns, formatted files stored in the google cloud storage bucket
 
 ### 2. Fast API
-- Objective: 
-- Tools: 
-- Output:
+- Objective: The FastAPI application serves as an abstraction layer that hides all application processing, API calls to OpenAI, fetching data from MySQL database, downloading files from Google Cloud Storage Bucket.
+- Tools: MySQL database connector for interfacing with MySQL database, Google Cloud connector for downloading files from Google Cloud, OpenAI package for interacting with GPT (for text based content) and Whisper (for audio based content), tiktoken library for counting the number of tokens, PyPDF2 library for extracting content from PDF files, Base64 library for encoding images to text, openpyxl library for parsing MS Excel spreadsheets, docx library for parsing MS Word documents, dotenv library for setting environment variables, and json library for parsing json content.
+- Output: FastAPI ensures the response is always in a JSON format with HTTP status, message (response content), type (data type of response content), and additional fields (if needed)
 
 ### 3. Streamlit
 - Objective: To provide a user-friendly interface for validating GPT model responses by allowing users to compare generated responses with validation inputs, edit annotator steps, and provide feedback.
@@ -55,12 +55,13 @@ pip install -r requirements.txt
 Google Cloud Storage is used for efficient storage of files
 
 6. AWS
+AWS can be utilized for various cloud services, including storage (Amazon S3)
 
 
-7. Streamlit
+8. Streamlit
 Streamlit is an open-source app framework that allows you to create interactive web applications easily.
 
-8. MySQL Database
+9. MySQL Database
 Relational database management system that allows you to store and manage data efficiently 
 
 ## Project Structure
@@ -104,14 +105,10 @@ Assignment1/
 2. GCS File Storage Path: https://storage.cloud.google.com/gaia_benchmark/files/file_name
 
 ## Live Application Link
-1. Streamlit application link: 
+Streamlit application link: https://bigdataassignment1.streamlit.app/
 
-## Steps to run application
-1. **Clone the Repository**: Clone the repository to your local desktop
-
-   ```bash
-   git clone https://github.com/BigDataIA-Fall2024-TeamB6/Assignment1
-   ```
+## Codelabs Link
+Codelabs documentation link: https://codelabs-preview.appspot.com/?file_id=https://docs.google.com/document/d/1QsNQheQwEPl2ARqfzTyy77Sx9AKXMdM_8YSEY6-qCbU/edit#6
 
 
 ## Attestation and Team Contribution
