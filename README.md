@@ -35,6 +35,33 @@ The project aims to evaluate the comprehension capabilities of a Large Language 
 1. GAIA benchmark dataset: https://huggingface.co/datasets/gaia-benchmark/GAIA
 
 ## Prerequisites
+Software Installations required for the project
+1. Python Environment
+A Python environment allows you to create isolated spaces for your Python projects, managing dependencies and versions separately.
+
+2. Libraries
+This assignment requires mutliple python libraries for data manipulation, API interactions, and web development like streamlit, huggingface_hub, pandas, matplotlib, mysql-connector-python.
+To download all the the required libraries for the project run the following command:
+```bash
+pip install -r requirements.txt
+```
+   
+3. Visual Studio Code
+
+4. Docker
+ Docker allows you to package applications and their dependencies into containers, ensuring consistent environments across different platforms
+
+5. Google Cloud Platform
+Google Cloud Storage is used for efficient storage of files
+
+6. AWS
+
+
+7. Streamlit
+Streamlit is an open-source app framework that allows you to create interactive web applications easily.
+
+8. MySQL Database
+Relational database management system that allows you to store and manage data efficiently 
 
 ## Project Structure
 ```
@@ -72,7 +99,19 @@ Assignment1/
 
 ![Architecture Diagram](https://github.com/BigDataIA-Fall2024-TeamB6/Assignment1/raw/main/diagram/llm_cognition.png)
 
+## Google Cloud Storage links
+1. GCS bucket link: https://console.cloud.google.com/storage/browser/gaia_benchmark
+2. GCS File Storage Path: https://storage.cloud.google.com/gaia_benchmark/files/file_name
+
+## Live Application Link
+1. Streamlit application link: 
+
 ## Steps to run application
+1. **Clone the Repository**: Clone the repository to your local desktop
+
+   ```bash
+   git clone https://github.com/BigDataIA-Fall2024-TeamB6/Assignment1
+   ```
 
 
 ## Attestation and Team Contribution
