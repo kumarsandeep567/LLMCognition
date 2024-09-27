@@ -102,23 +102,6 @@ class Feedback(BaseModel):
     task_id: str
     feedback: str
 
-class AnalyticsResponse(BaseModel):
-    task_id: str
-    user_id: int
-    question: Optional[str]
-    level: Optional[str]
-    final_answer: Optional[str]
-    file_name: Optional[str]
-    updated_steps: Optional[str]
-    tokens_per_text_prompt: Optional[int]
-    tokens_per_attachment: Optional[int]
-    gpt_response: Optional[str]
-    total_cost: Optional[float]
-    time_consumed: Optional[float]
-    feedback: Optional[str]
-    time_stamp: str
-    how_long_did_this_take: Optional[str]
-
 
 def create_connection(attempts = 3, delay = 2):
     '''Start a connection with the MySQL database'''
@@ -932,8 +915,6 @@ async def get_analytics():
 
                 return JSONResponse(content=processed_results)
 
-                return analytics_data
-
             except Exception as exception:
                 logger.error("Error: get_analytics() encountered an error")
                 logger.error(exception)
@@ -943,7 +924,3 @@ async def get_analytics():
                 logger.info("Database - Connection to the database was closed")
 
 # ====================== Application service : End ======================
-
-
-# Add a price warning in fastapi
-# Refer pricing charts based on tokens
