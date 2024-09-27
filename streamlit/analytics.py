@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import requests
+import os
 
 # Function to perform cost efficiency analysis
 def cost_efficiency_analysis(df):
@@ -76,7 +77,7 @@ def display_analytics_page():
     st.subheader("User data")
     
     # Fetch analytics data from the API
-    response = requests.get("http://localhost:8000/analytics")
+    response = requests.get("http://"+ os.getenv("HOSTNAME") + ":8000/analytics")
     
     # Check if the request was successful
     if response.status_code == 200:

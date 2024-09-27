@@ -28,10 +28,10 @@ def execute_create_query(conn):
     try:
 
         # Drop table queries
-        drop_features_table_query = "DROP TABLE IF EXISTS gaia_features;"
-        drop_annotation_table_query = "DROP TABLE IF EXISTS gaia_annotations;"
-        drop_users_table_query = "DROP TABLE IF EXISTS users;"
         drop_analytics_table_query = "DROP TABLE IF EXISTS analytics;"
+        drop_annotation_table_query = "DROP TABLE IF EXISTS gaia_annotations;"
+        drop_features_table_query = "DROP TABLE IF EXISTS gaia_features;"
+        drop_users_table_query = "DROP TABLE IF EXISTS users;"
 
         # Create table queries
         create_features_table_query = """
@@ -87,10 +87,10 @@ def execute_create_query(conn):
 
         cursor = conn.cursor()
         # Drop foreign key constraints if they exist
-        drop_foreign_key_if_exists(cursor, 'gaia_annotations', 'gaia_annotations_ibfk_1')
-        drop_foreign_key_if_exists(cursor, 'analytics', 'analytics_ibfk_1')
-        drop_foreign_key_if_exists(cursor, 'analytics', 'analytics_ibfk_2')
-        logger.info("Foreign key constraints dropped successfully.")
+        # drop_foreign_key_if_exists(cursor, 'gaia_annotations', 'gaia_annotations_ibfk_1')
+        # drop_foreign_key_if_exists(cursor, 'analytics', 'analytics_ibfk_1')
+        # drop_foreign_key_if_exists(cursor, 'analytics', 'analytics_ibfk_2')
+        # logger.info("Foreign key constraints dropped successfully.")
 
         # gaia_features table
         cursor.execute(drop_features_table_query)

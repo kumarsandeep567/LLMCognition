@@ -568,7 +568,7 @@ def getannotation(task_id: str) -> dict[str, Any]:
 
                 # Fetch the steps for the task_id
                 logger.info("SQL - Running a SELECT statement")
-                query = """SELECT Steps FROM annotation_features WHERE task_id = %s"""
+                query = """SELECT Steps FROM gaia_annotations WHERE task_id = %s"""
 
                 result = cursor.execute(query, (task_id,))
                 prompt_steps = cursor.fetchone()
@@ -895,7 +895,7 @@ async def get_analytics():
                 SELECT gfeat.*, atx.user_id, atx.updated_steps, atx.tokens_per_text_prompt, 
                        atx.tokens_per_attachment, atx.gpt_response, atx.total_cost, 
                        atx.time_consumed, atx.feedback, atx.time_stamp, afeat.How_long_did_this_take
-                FROM analytics atx, gaia_features gfeat, annotation_features afeat
+                FROM analytics atx, gaia_features gfeat, gaia_annotations afeat
                 WHERE atx.task_id = gfeat.task_id AND atx.task_id = afeat.task_id
                 """
                 cursor.execute(query)

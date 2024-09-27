@@ -106,7 +106,7 @@ def main():
     json_path = os.getenv("METADATA_FILENAME")
     gcp_csv_filepath = os.getenv("GCP_CSV_PATH")
     csv_filename = os.getenv("CSV_FILENAME")
-    creds_file_path = os.getenv("GCS_CREDENTIALS_PATH")
+    creds_file_path = os.path.join(os.getcwd(), os.getenv("GCS_CREDENTIALS_PATH"))
 
     # Download metadata JSON file from GCS
     download_json_from_gcs(bucket_name, blob_name, json_path, creds_file_path)

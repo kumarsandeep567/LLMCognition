@@ -42,7 +42,7 @@ def load_files_into_gcp(repository_id, repository_type, validation_files, bucket
 def load_files(access_token, repository_id, repository_type, file_path):
 
     # Login to hugging face
-    login(token = access_token, add_to_git_credential = True)
+    login(token = access_token, add_to_git_credential = False)
 
     # Load all the files from the GAIA benchmark repository
     files = list_repo_files(
@@ -65,7 +65,7 @@ def main():
     repository_id = os.getenv("REPO_ID")
     repository_type = os.getenv("REPO_TYPE")
     bucket_name = os.getenv("BUCKET_NAME")
-    creds_file_path = os.getenv("GCS_CREDENTIALS_PATH")
+    creds_file_path = os.path.join(os.getcwd(), os.getenv("GCS_CREDENTIALS_PATH"))
     file_path = os.getenv("FILE_PATH")
     gcp_folder_path = os.getenv("GCP_FILES_PATH")
     

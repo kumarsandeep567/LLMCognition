@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from http import HTTPStatus
+import os
 
 # Function to query GPT model response
 def query_gpt(task_id, user_id, updated_steps=None):
@@ -13,7 +14,7 @@ def query_gpt(task_id, user_id, updated_steps=None):
     if updated_steps:
         data['updated_steps'] = updated_steps
     
-    response = requests.post('http://localhost:8000/querygpt', json=data)
+    response = requests.post('http://'+ os.getenv("HOSTNAME") +':8000/querygpt', json=data)
 
     if response.status_code == HTTPStatus.OK:
         return response.json()

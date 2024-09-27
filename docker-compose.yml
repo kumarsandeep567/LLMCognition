@@ -1,0 +1,56 @@
+services:
+
+  mysql_service:
+    build:
+      context: ./mysql
+      dockerfile: Dockerfile
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret-root-password
+      - MYSQL_DATABASE=gaia_database
+    ports: 
+      - 3306:3306
+    networks:
+      - appnetwork
+  
+  database_etl:
+    build:
+      context: ./database_ETL
+      dockerfile: Dockerfile
+    ports:
+      - 3309:3309
+    environment:
+      - MYSQL_HOSTNAME=mysql_service
+    depends_on:
+      - mysql_service
+    networks:
+      - appnetwork
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports: 
+      - 8000:8000
+    environment:
+      - DB_HOST=mysql_service
+    depends_on:
+      - mysql_service
+    networks:
+      - appnetwork
+
+  streamlit_app:
+    build:
+      context: ./streamlit
+      dockerfile: Dockerfile
+    ports: 
+      - 8501:8501
+    environment:
+      - HOSTNAME=backend
+    depends_on:
+      - backend
+    networks:
+      - appnetwork
+
+networks:
+  appnetwork:
+    driver: bridge

@@ -1,13 +1,14 @@
 import streamlit as st
 import requests
 from http import HTTPStatus
+import os
 
 # Function to display the search engine page
 def display_search_engine():
     st.title("Search Engine")
 
     # Fetch prompts from the backend
-    response = requests.get("http://localhost:8000/listprompts/20")
+    response = requests.get("http://"+ os.getenv("HOSTNAME") + ":8000/listprompts/20")
     response_data = response.json()
 
     if response_data['status'] == HTTPStatus.OK:
@@ -19,7 +20,9 @@ def display_search_engine():
 
         if st.button("Load Data") and selected_prompt:
             selected_task_id = prompts_dict[selected_prompt]
-            load_response = requests.get(f"http://localhost:8000/loadprompt/{selected_task_id}")
+
+            url = "http://"+ os.getenv("HOSTNAME") + ":8000"
+            load_response = requests.get(f"{url}/loadprompt/{selected_task_id}")
             load_data = load_response.json()
 
             if load_data['status'] == HTTPStatus.OK:
