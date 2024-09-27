@@ -6,6 +6,7 @@ import PyPDF2
 import logging
 import openpyxl
 import tiktoken
+import datetime
 from typing import Literal
 from dotenv import load_dotenv
 from google.cloud import storage
@@ -82,6 +83,17 @@ def generate_restriction(final_answer: str) -> str:
         return "Provide only numerical values in your response. No yapping."
     else:
         return "No yapping."
+    
+# Helper function to check if object is json serializable
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    
+    if isinstance(obj, datetime.datetime):
+        try:
+            return obj.isoformat()
+        except:
+            return str(obj)
+    return str(obj)
 
 
 # Helper function to extract contents from a file
@@ -116,14 +128,14 @@ def extract_file_content(file_path: str) -> str:
                 logger.info("INTERNAL - Processing .xlsx file")
                 workbook = openpyxl.load_workbook(file_path)
                 sheet = workbook.active
-                data = [[cell.value for cell in row] for row in sheet.iter_rows()]
+                data = [[json_serial(cell.value) for cell in row] for row in sheet.iter_rows()]
             
             # CSV files
             else: 
                 logger.info("INTERNAL - Processing .csv file")
                 with open(file_path, 'r') as file:
                     reader = csv.reader(file)
-                    data = list(reader)
+                    data = [[json_serial(value) for value in row] for row in reader]
             return json.dumps(data)
 
         elif file_extension == '.jsonld':
