@@ -84,7 +84,7 @@ def display_validation_page():
     button_col1, button_col2 = st.columns([2, 1]) 
 
     with button_col1:
-        # Button to compare the responses
+        # Compare the responses button
         if st.button("Compare Responses"):
             if gpt_response_box.strip() == validation_response_box.strip():
                 st.success("The GPT response and validation response match!")
@@ -92,7 +92,7 @@ def display_validation_page():
                 st.error("The GPT response and validation response do NOT match!")
 
     with button_col2:
-        # Button to mark the response as correct
+        # Mark the response as correct button
         if st.button("Mark as Correct"):
              st.success("The GPT response and validation response match!")
 
@@ -111,7 +111,7 @@ def display_validation_page():
             st.session_state['count'] += 1  # Increment the count
             st.session_state['page'] = 'validation'
 
-            # Instead of st.experimental_rerun(), use JavaScript to reload the page
+            # Instead of st.experimental_rerun(), using JavaScript to reload the page
             st.write('<script>location.reload()</script>', unsafe_allow_html=True)
         else:
             st.error("Failed to regenerate GPT response.")
@@ -124,11 +124,21 @@ def display_validation_page():
 
     if st.button("Submit"):
         if feedback_text.strip():
-            # Here, you would typically save the feedback to a database or handle it accordingly
-            st.success("Thank you for your feedback!")
-            # Optionally clear the feedback box after submission
-            st.session_state['feedback'] = feedback_text
-            feedback_text = ""
+
+            # Fields to save
+            data = { 
+                'user_id': st.session_state['user_id'],
+                'task_id': st.session_state['task_id'],
+                'feedback': feedback_text
+            }
+
+            response = requests.post("http://localhost:8080/feedback", json=data)
+            response = response.json()
+
+            if response['status'] == HTTPStatus.OK:
+                st.success("Thank you for your feedback!")
+                st.session_state['feedback'] = feedback_text
+                feedback_text = ""
         else:
             st.error("Please enter your feedback before submitting.")
 
