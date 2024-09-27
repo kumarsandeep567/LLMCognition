@@ -37,6 +37,34 @@ The project aims to evaluate the comprehension capabilities of a Large Language 
 ## Prerequisites
 
 ## Project Structure
+Assignment1/
+├── backend/
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── helpers.py
+│   ├── main.py
+│   ├── requirements.txt
+├── database_ETL/
+│   │   ├── .env.example
+│   │   ├── connectDB.py
+│   │   ├── fileLoader.py
+│   │   ├── jsonParser.py
+│   │   ├── main.py
+│   │   └── requirements.txt
+├── diagram/
+│   ├── diagram.py
+│   └── llm_cognition.png
+├── streamlit/
+│   ├── .streamlit/
+│   │   ├── DBconnection.py
+│   │   └── config.toml
+│   ├── analytics.py
+│   ├── app.py
+│   ├── loginpage.py
+│   ├── searchengine.py
+│   └── validation.py
+├── LICENSE
+└── README.md
 
 
 ## Architecture Diagram
