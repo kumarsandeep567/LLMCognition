@@ -2,3 +2,6 @@
 fastapi_errors.log
 installation.md
 __pycache__/
+files
+GCP_config.json
+validation_files
