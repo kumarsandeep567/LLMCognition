@@ -124,21 +124,11 @@ def display_validation_page():
 
     if st.button("Submit"):
         if feedback_text.strip():
-
-            # Fields to save
-            data = { 
-                'user_id': st.session_state['user_id'],
-                'task_id': st.session_state['task_id'],
-                'feedback': feedback_text
-            }
-
-            response = requests.post("http://localhost:8080/feedback", json=data)
-            response = response.json()
-
-            if response['status'] == HTTPStatus.OK:
-                st.success("Thank you for your feedback!")
-                st.session_state['feedback'] = feedback_text
-                feedback_text = ""
+            # Here, you would typically save the feedback to a database or handle it accordingly
+            st.success("Thank you for your feedback!")
+            # Optionally clear the feedback box after submission
+            st.session_state['feedback'] = feedback_text
+            feedback_text = ""
         else:
             st.error("Please enter your feedback before submitting.")
 

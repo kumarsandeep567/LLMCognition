@@ -7,7 +7,7 @@ def display_search_engine():
     st.title("Search Engine")
 
     # Fetch prompts from the backend
-    response = requests.get("http://localhost:8000/listprompts/12")
+    response = requests.get("http://localhost:8000/listprompts/20")
     response_data = response.json()
 
     if response_data['status'] == HTTPStatus.OK:

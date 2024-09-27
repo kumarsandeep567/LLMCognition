@@ -3,7 +3,6 @@ import streamlit as st
 import requests
 from http import HTTPStatus
 
-# Dummy login function for demonstration purposes
 def login(email, password):
     data = { 
         'email': email, 
@@ -12,7 +11,6 @@ def login(email, password):
     response = requests.post('http://localhost:8000/login', json=data)
     return response.json()
 
-# Dummy registration function for demonstration purposes
 def register(first_name, last_name, email, phone, password):
     data = { 
         'first_name': first_name,
@@ -25,7 +23,8 @@ def register(first_name, last_name, email, phone, password):
     return response.json()
 
 def display_login_page():
-    st.title("Login / Register Page")
+    st.title("Welcome to GPT Search Engine")
+    st.subheader("Login / Register Page")
 
     # Option to choose between Login or Register
     option = st.selectbox("Select an action:", ["Login", "Register"], key="action_select")
