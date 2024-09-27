@@ -46,14 +46,14 @@ The project aims to evaluate the comprehension capabilities of a Large Language 
 ## Steps to run application
 
 
-## Team Information and Contribution
-Utilizing GitHub Issues is essential for tracking modifications, feature requests, and bugs within the project. It serves as a centralized platform for documenting all project-related concerns, allowing for transparent collaboration, prioritization, and assignment of tasks to team members. This practice ensures that the project's progress is cohesive, organized, and accessible to all stakeholders, fostering an environment of open communication and continuous improvement.
+## Attestation and Team Contribution
+**WE ATTEST THAT WE HAVEN’T USED ANY OTHER STUDENTS’ WORK IN OUR ASSIGNMENT AND ABIDE BY THE POLICIES LISTED IN THE STUDENT HANDBOOK**
 
 Name           | Contribution %| 
 ---------------|---------------| 
-Anirudh Joshi  | 34%           | 
-Nitant Jatale  | 33%           | 
-Rutuja More    | 33%           |  
+Sandeep Kumar  | 33%           | 
+Gomathy S      | 33%           | 
+Deepthi Nasika | 33%           |  
 
 
 ## Problem Statement
