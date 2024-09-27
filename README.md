@@ -55,12 +55,13 @@ pip install -r requirements.txt
 Google Cloud Storage is used for efficient storage of files
 
 6. AWS
+AWS can be utilized for various cloud services, including storage (Amazon S3)
 
 
-7. Streamlit
+8. Streamlit
 Streamlit is an open-source app framework that allows you to create interactive web applications easily.
 
-8. MySQL Database
+9. MySQL Database
 Relational database management system that allows you to store and manage data efficiently 
 
 ## Project Structure
