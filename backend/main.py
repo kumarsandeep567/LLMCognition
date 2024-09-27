@@ -691,7 +691,8 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
                 content_available = True
 
             if content_available:
-                if (file_name is not None) or (file_name != ''): 
+                if file_name is not None: 
+
                     file_path = os.path.join(os.getcwd(), os.getenv('DOWNLOAD_DIR'), file_name)
 
                     if file_name.lower().endswith(('.png', '.jpg')):
@@ -744,14 +745,15 @@ async def query_gpt(query: QueryGPT) -> dict[str, Any]:
             # Calculate the tokens and cost
             token_count = 0
 
+
             for msg in messages:
                 if isinstance(msg['content'], str):
                     token_count += count_tokens(msg['content'])
                 else:
                     token_count += count_tokens(msg['content'][0]['text'])
-                    token_count += count_tokens(file_content)
+                    token_count += count_tokens(file_content) if file_content is not None else 0
 
-            file_token_count = count_tokens(file_content)
+            file_token_count = count_tokens(file_content) if file_content is not None else 0
             cost = token_count * 0.000005
             cost = float('{:.4f}'.format(cost))
 
