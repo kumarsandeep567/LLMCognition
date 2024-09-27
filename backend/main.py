@@ -629,7 +629,6 @@ def update_analytics(data: dict) -> bool:
                 placeholders = ', '.join(['%s'] * len(data))
 
                 query = f"INSERT INTO analytics ({columns}) VALUES ({placeholders})"
-                print("Query is ", query)
 
                 cursor.execute(query, tuple(data.values()))
                 conn.commit()
