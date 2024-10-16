@@ -1,4 +1,4 @@
-# Assignment 1
+# LLM Cognition
 Development of an interactive tool using Streamlit that enables Model Evaluation team to evaluate the performance of OpenAI models against the test cases
 
 ## Problem Statement
@@ -111,11 +111,10 @@ Streamlit application link: https://bigdataassignment1.streamlit.app/
 Codelabs documentation link: https://codelabs-preview.appspot.com/?file_id=https://docs.google.com/document/d/1QsNQheQwEPl2ARqfzTyy77Sx9AKXMdM_8YSEY6-qCbU/edit#6
 
 
-## Attestation and Team Contribution
-**WE ATTEST THAT WE HAVEN’T USED ANY OTHER STUDENTS’ WORK IN OUR ASSIGNMENT AND ABIDE BY THE POLICIES LISTED IN THE STUDENT HANDBOOK**
+## Contributions
 
-Name | NUID | Contribution% 
+Contributor | Contribution% | GitHub URL
 --- | --- | --- |
-Sandeep Suresh Kumar | 002841297 | 33% 
-Gomathy Selvamuthiah | 002410534 | 33% 
-Deepthi Nasika       | 002474582 | 33% 
+Sandeep Kumar         | 33%  | [GitHub Profile](https://github.com/kumarsandeep567)
+Gomathy Selvamuthiah  | 33%  | [GitHub Profile](https://github.com/GomathySelvamuthiah)
+Deepthi Nasika        | 33%  | [GitHub Profile](https://github.com/Deepthi-Nasika)
